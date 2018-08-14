@@ -250,33 +250,53 @@ def get_costs(a, s, rlist, start, end, dims, tags, granularity="MONTHLY"):
                               aws_access_key_id=a,
                               aws_secret_access_key=s,
                               region_name=r)
+            nextPageToken = None
+            while(True):
+                if len(groupbys) > 0:
+                    if nextPageToken is None:
+                        res = ce.get_cost_and_usage(TimePeriod={"Start":start, "End":end},
+                                                    Granularity=granularity,
+                                                    Metrics=["BlendedCost", "UnblendedCost", "UsageQuantity"],
+                                                    GroupBy=groupbys)
+                    else:
+                        res = ce.get_cost_and_usage(TimePeriod={"Start":start, "End":end},
+                                                    Granularity=granularity,
+                                                    Metrics=["BlendedCost", "UnblendedCost", "UsageQuantity"],
+                                                    GroupBy=groupbys,
+                                                    NextPageToken=nextPageToken)
+                else:
+                    if nextPageToken is None:
+                        res = ce.get_cost_and_usage(TimePeriod={"Start":start, "End":end},
+                                                    Granularity=granularity,
+                                                    Metrics=["BlendedCost", "UnblendedCost", "UsageQuantity"])
+                    else:
+                        res = ce.get_cost_and_usage(TimePeriod={"Start":start, "End":end},
+                                                    Granularity=granularity,
+                                                    Metrics=["BlendedCost", "UnblendedCost", "UsageQuantity"],
+                                                    NextPageToken=nextPageToken)
 
 
-            if len(groupbys) > 0:
-                res = ce.get_cost_and_usage(TimePeriod={"Start":start, "End":end},
-                                            Granularity=granularity,
-                                            Metrics=["BlendedCost", "UnblendedCost", "UsageQuantity"],
-                                            GroupBy=groupbys)
-            else:
-                res = ce.get_cost_and_usage(TimePeriod={"Start":start, "End":end},
-                                            Granularity=granularity,
-                                            Metrics=["BlendedCost", "UnblendedCost", "UsageQuantity"])
-            rbt = res['ResultsByTime']
-            for groups in rbt:
-                for group in groups['Groups']:
-                # Metrics are of {'Amount':xxxxxx, 'Unit':xxxxxx}
-                    cost = {
-                        "region": r,
-                        "estimated": groups['Estimated'],
-                        "start_time": groups['TimePeriod']['Start'],
-                        "end_time": groups['TimePeriod']['End'],
-                        "group": group['Keys'],
-                        #"srvabbr": ABBRV[group['Keys'][0]],
-                        "blended_cost": group['Metrics']['BlendedCost'],
-                        "unblended_cost": group['Metrics']['UnblendedCost'],
-                        "usage_quantity": group['Metrics']['UsageQuantity']
-                    }
-                    costs.append(cost)
+                rbt = res['ResultsByTime']
+                for groups in rbt:
+                    for group in groups['Groups']:
+                    # Metrics are of {'Amount':xxxxxx, 'Unit':xxxxxx}
+                        cost = {
+                            "region": r,
+                            "estimated": groups['Estimated'],
+                            "start_time": groups['TimePeriod']['Start'],
+                            "end_time": groups['TimePeriod']['End'],
+                            "group": group['Keys'],
+                            #"srvabbr": ABBRV[group['Keys'][0]],
+                            "blended_cost": group['Metrics']['BlendedCost'],
+                            "unblended_cost": group['Metrics']['UnblendedCost'],
+                            "usage_quantity": group['Metrics']['UsageQuantity']
+                        }
+                        costs.append(cost)                
+                
+                if 'NextPageToken' in res.keys():
+                    nextPageToken = res['NextPageToken']
+                else:
+                    break
     except:
         e = sys.exc_info()
         print("ERROR: exception region=%s, error=%s" %(r, str(e)))
