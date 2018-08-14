@@ -243,7 +243,16 @@ def get_costs(a, s, rlist, start, end, dims, tags, granularity="MONTHLY"):
 
     if len(groupbys) == 0: # group by service by default
         groupbys.append({"Type":"DIMENSION", "Key":"SERVICE"})
-
+    
+    
+    FullFilter={"Not": {"Dimensions": {"Key": "RECORD_TYPE","Values": ["Credit", "Refund", "Upfront", "Support"]}}}
+    INC_SUPPORT_Filter={"Not": {"Dimensions": {"Key": "RECORD_TYPE","Values": ["Credit", "Refund", "Upfront"]}}}
+    CreditsOnly_Filter={"Dimensions": {"Key": "RECORD_TYPE","Values": ["Credit",]}}
+    RefundOnly_Filter={"Dimensions": {"Key": "RECORD_TYPE","Values": ["Refund",]}}
+    UpfrontOnly_Filter={"Dimensions": {"Key": "RECORD_TYPE","Values": ["Upfront",]}}
+            
+    
+    
     try:
         for r in rlist:
             ce = boto3.client('ce',
@@ -257,23 +266,27 @@ def get_costs(a, s, rlist, start, end, dims, tags, granularity="MONTHLY"):
                         res = ce.get_cost_and_usage(TimePeriod={"Start":start, "End":end},
                                                     Granularity=granularity,
                                                     Metrics=["BlendedCost", "UnblendedCost", "UsageQuantity"],
-                                                    GroupBy=groupbys)
+                                                    GroupBy=groupbys,
+                                                    Filter=FullFilter)
                     else:
                         res = ce.get_cost_and_usage(TimePeriod={"Start":start, "End":end},
                                                     Granularity=granularity,
                                                     Metrics=["BlendedCost", "UnblendedCost", "UsageQuantity"],
                                                     GroupBy=groupbys,
-                                                    NextPageToken=nextPageToken)
+                                                    NextPageToken=nextPageToken,
+                                                    Filter=FullFilter)
                 else:
                     if nextPageToken is None:
                         res = ce.get_cost_and_usage(TimePeriod={"Start":start, "End":end},
                                                     Granularity=granularity,
-                                                    Metrics=["BlendedCost", "UnblendedCost", "UsageQuantity"])
+                                                    Metrics=["BlendedCost", "UnblendedCost", "UsageQuantity"],
+                                                    Filter=FullFilter)
                     else:
                         res = ce.get_cost_and_usage(TimePeriod={"Start":start, "End":end},
                                                     Granularity=granularity,
                                                     Metrics=["BlendedCost", "UnblendedCost", "UsageQuantity"],
-                                                    NextPageToken=nextPageToken)
+                                                    NextPageToken=nextPageToken,
+                                                    Filter=FullFilter)
 
 
                 rbt = res['ResultsByTime']
